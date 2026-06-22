@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission Control — ListedAndDesigned</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#07090f;--panel:#0c1220;--card:#111827;--border:#1e3a5f;--tx:#e2e8f0;--ts:#94a3b8;--tm:#475569;--c1:#00d4ff;--c2:#7c3aed;--c3:#10b981;--c4:#f59e0b;--c5:#ef4444;--cm:#c084fc;}
+html,body{height:100%;background:var(--bg);font-family:'Inter',sans-serif;color:var(--tx);overflow:hidden;}
+body{display:flex;flex-direction:column;}
+.hud{background:var(--panel);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;height:44px;}
+.logo{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--c1);letter-spacing:1px;}
+.hud-r{display:flex;gap:12px;align-items:center;}
+.hstat{font-size:10px;color:var(--tm);}
+.hstat b{color:var(--tx);}
+.pbadge{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:10px;color:var(--ts);font-family:'JetBrains Mono',monospace;}
+.pbadge b{color:var(--c1);}
+.lpill{display:flex;align-items:center;gap:5px;background:#0a1f15;border:1px solid #10b98144;border-radius:20px;padding:2px 8px;font-size:9px;color:var(--c3);font-weight:600;letter-spacing:1px;}
+.ldot{width:5px;height:5px;border-radius:50%;background:var(--c3);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+.aipill{border-radius:20px;padding:2px 8px;font-size:9px;font-weight:600;letter-spacing:1px;}
+.aion{background:#0a1f2e;border:1px solid var(--c1)44;color:var(--c1);}
+.aioff{background:#1f0a0a;border:1px solid var(--c5)44;color:var(--c5);}
+.main{display:flex;flex:1;overflow:hidden;min-height:0;}
+.log{width:240px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.log-hdr{padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.log-title{font-size:10px;font-weight:600;color:var(--ts);letter-spacing:1.5px;text-transform:uppercase;}
+.log-sub{font-size:9px;color:var(--tm);margin-top:1px;}
+.log-body{flex:1;overflow-y:auto;min-height:0;}
+.log-body::-webkit-scrollbar{width:2px;}
+.log-body::-webkit-scrollbar-thumb{background:var(--border);}
+.log-entry{padding:5px 12px;border-bottom:1px solid #ffffff03;}
+.log-meta{display:flex;align-items:center;gap:4px;margin-bottom:1px;}
+.log-av{width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0;}
+.log-name{font-size:9px;font-weight:600;}
+.log-time{font-size:8px;color:var(--tm);margin-left:auto;}
+.log-txt{font-size:10px;color:var(--ts);line-height:1.45;padding-left:17px;}
+.log-sys .log-name,.log-sys .log-txt{color:var(--tm);font-style:italic;}
+.jump{display:none;position:sticky;bottom:4px;left:50%;transform:translateX(-50%);background:var(--c2);color:#fff;font-size:8px;padding:3px 10px;border-radius:10px;cursor:pointer;border:none;font-weight:600;white-space:nowrap;}
+.floor{flex:1;position:relative;background:#07090f;min-width:0;overflow:hidden;}
+.building{position:absolute;inset:12px;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;}
+.room{position:relative;border-radius:4px;overflow:visible;}
+.room-grid{position:absolute;inset:0;opacity:.05;background-image:linear-gradient(rgba(255,255,255,.2) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.2) 1px,transparent 1px);background-size:20px 20px;border-radius:4px;}
+.room-border{position:absolute;inset:0;border-radius:4px;pointer-events:none;}
+.room-label{position:absolute;top:7px;left:0;right:0;text-align:center;font-size:9px;font-weight:700;letter-spacing:1.5px;z-index:2;}
+.room-sub{position:absolute;top:18px;left:0;right:0;text-align:center;font-size:7px;letter-spacing:.5px;z-index:2;}
+.rc{position:absolute;width:10px;height:10px;z-index:3;}
+.rc.tl{top:0;left:0;border-top:2px solid;border-left:2px solid;}
+.rc.tr{top:0;right:0;border-top:2px solid;border-right:2px solid;}
+.rc.bl{bottom:0;left:0;border-bottom:2px solid;border-left:2px solid;}
+.rc.br{bottom:0;right:0;border-bottom:2px solid;border-right:2px solid;}
+.room.strategy{grid-column:2/4;grid-row:2/3;}
+.furn{position:absolute;}
+.desk{height:16px;border-radius:2px;}
+.scr{position:absolute;border-radius:2px;overflow:hidden;}
+.scr-line{position:absolute;left:2px;right:2px;height:1.5px;border-radius:1px;animation:scan 3s linear infinite;}
+@keyframes scan{0%{top:10%}100%{top:90%}}
+.rack{position:absolute;border-radius:2px;overflow:hidden;}
+.rled{width:4px;height:4px;border-radius:50%;position:absolute;right:3px;animation:blink var(--d,1.2s) infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
+.lglow{position:absolute;border-radius:50%;animation:lgw 2s ease-in-out infinite;}
+@keyframes lgw{0%,100%{opacity:.25}50%{opacity:.6}}
+.ldp{border-radius:50%;width:5px;height:5px;position:absolute;}
+.chair{border-radius:50%;position:absolute;width:12px;height:12px;}
+.crate{border-radius:2px;position:absolute;}
+.papers{border-radius:1px;position:absolute;opacity:.55;}
+.tbl{position:absolute;border-radius:3px;}
+/* AGENTS */
+.agent{position:absolute;display:flex;flex-direction:column;align-items:center;z-index:20;pointer-events:none;will-change:left,top;}
+.ag-glow{position:absolute;border-radius:50%;width:34px;height:34px;top:-3px;left:50%;transform:translateX(-50%);animation:agw 2s ease-in-out infinite;}
+@keyframes agw{0%,100%{opacity:.15}50%{opacity:.4}}
+.ag-fig{position:relative;width:20px;height:30px;}
+.ag-shad{position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:14px;height:3px;background:rgba(0,0,0,.45);border-radius:50%;}
+.ag-legs{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:12px;display:flex;gap:3px;justify-content:center;}
+.leg{width:3.5px;height:9px;border-radius:2px;}
+.leg.walk{animation:wlk .4s ease-in-out infinite alternate;}
+.leg.walk2{animation:wlk .4s ease-in-out infinite alternate-reverse;}
+@keyframes wlk{from{transform:skewX(-18deg)}to{transform:skewX(18deg)}}
+.ag-body{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:11px;height:10px;border-radius:2px;animation:brth 2.5s ease-in-out infinite;}
+@keyframes brth{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(1.04)}}
+.ag-head{position:absolute;top:0;left:50%;transform:translateX(-50%);width:10px;height:10px;border-radius:50%;}
+.ag-hat{position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:12px;height:3px;border-radius:1px;}
+.ag-badge{background:rgba(5,9,18,.92);border-radius:3px;padding:2px 5px;margin-top:2px;border:1px solid;white-space:nowrap;}
+.ag-name{font-size:7px;font-weight:700;text-align:center;letter-spacing:.5px;}
+.ag-role{font-size:5.5px;text-align:center;opacity:.55;margin-top:1px;}
+.speech{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:rgba(6,10,22,.97);border:1px solid;border-radius:5px;padding:4px 8px;font-size:8px;line-height:1.45;max-width:155px;text-align:center;z-index:30;margin-bottom:5px;pointer-events:none;white-space:normal;}
+.speech::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;}
+/* PARTICLES */
+.particles{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1;}
+.particle{position:absolute;border-radius:50%;animation:float linear infinite;}
+@keyframes float{0%{transform:translateY(110%);opacity:0}10%{opacity:.8}90%{opacity:.3}100%{transform:translateY(-10px);opacity:0}}
+/* MGR */
+.mgr{width:260px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.mgr-hdr{padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.mgr-row{display:flex;align-items:center;gap:8px;}
+.mgr-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4a0080,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1px solid var(--cm)33;animation:mgw 3s ease-in-out infinite;}
+@keyframes mgw{0%,100%{box-shadow:0 0 8px var(--cm)22}50%{box-shadow:0 0 16px var(--cm)55}}
+.mgr-name{font-size:12px;font-weight:600;color:var(--cm);}
+.mgr-role{font-size:9px;color:var(--tm);}
+.mgr-status{font-size:9px;color:var(--tm);font-style:italic;margin-top:6px;line-height:1.4;}
+.mgr-chat{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;min-height:0;}
+.mgr-chat::-webkit-scrollbar{width:2px;}
+.mgr-chat::-webkit-scrollbar-thumb{background:var(--border);}
+.bubble{max-width:100%;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.5;}
+.bubble.nova{background:var(--card);border:1px solid var(--border);color:var(--tx);border-bottom-left-radius:2px;}
+.bubble.user{background:#1a0e38;border:1px solid var(--c2)44;color:var(--tx);align-self:flex-end;border-bottom-right-radius:2px;}
+.bubble.think{background:var(--card);border:1px solid var(--border);color:var(--tm);font-style:italic;}
+.mgr-foot{padding:8px 10px;border-top:1px solid var(--border);flex-shrink:0;}
+.mgr-inp-row{display:flex;gap:6px;align-items:flex-end;}
+.mgr-inp{flex:1;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--tx);font-family:'Inter',sans-serif;font-size:11px;padding:7px 9px;resize:none;height:34px;line-height:1.3;}
+.mgr-inp:focus{outline:none;border-color:var(--cm)66;}
+.mgr-inp::placeholder{color:var(--tm);}
+.mgr-send{background:var(--c2);border:none;border-radius:6px;color:#fff;width:32px;height:34px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mgr-send:hover{background:#6d28d9;}
+.mgr-send:disabled{background:var(--tm);cursor:not-allowed;}
+.mgr-hint{font-size:8px;color:var(--tm);margin-top:4px;text-align:center;}
+.apibar{background:var(--panel);border-top:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;height:36px;}
+.api-lbl{font-size:9px;color:var(--tm);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.api-inp{flex:1;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--tx);font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 8px;max-width:380px;height:24px;}
+.api-inp:focus{outline:none;border-color:var(--c1)66;}
+.api-inp::placeholder{color:var(--tm);}
+.api-btn{background:var(--card);border:1px solid var(--c1)66;border-radius:4px;color:var(--c1);font-family:'JetBrains Mono',monospace;font-size:9px;padding:4px 10px;cursor:pointer;white-space:nowrap;height:24px;}
+.api-btn:hover{background:var(--c1)11;}
+.api-note{font-size:8px;color:var(--tm);}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="logo">⬡ MISSION CONTROL — LISTEDANDDESIGNED</div>
+    <div class="pbadge">OP: <b id="ptxt">INITIALIZING</b></div>
+  </div>
+  <div class="hud-r">
+    <span class="hstat">PHASE <b id="pnum">0</b></span>
+    <span class="hstat">EXCHANGES <b id="exc">0</b></span>
+    <div class="lpill"><div class="ldot"></div>LIVE</div>
+    <div class="aipill aioff" id="aipill">● AI OFFLINE</div>
+  </div>
+</div>
+<div class="main">
+  <div class="log">
+    <div class="log-hdr"><div class="log-title">Activity Log</div><div class="log-sub">Live agent communications</div></div>
+    <div class="log-body" id="logbody"></div>
+    <button class="jump" id="jumpbtn" onclick="jumpBottom()">↓ Latest</button>
+  </div>
+  <div class="floor" id="floor">
+    <div class="particles" id="particles"></div>
+    <div class="building" id="building">
+      <div class="room" id="room-vault" style="background:#140e00;">
+        <div class="room-grid"></div>
+        <div class="room-border" style="border:1.5px solid #f59e0b55;box-shadow:inset 0 0 18px #f59e0b08;"></div>
+        <div class="rc tl" style="border-color:#f59e0b;"></div><div class="rc tr" style="border-color:#f59e0b;"></div><div class="rc bl" style="border-color:#f59e0b;"></div><div class="rc br" style="border-color:#f59e0b;"></div>
+        <div class="room-label" style="color:#f59e0b;">VAULT</div>
+        <div class="room-sub" style="color:#f59e0b88;">Marketing HQ</div>
+        <div class="furn desk" style="background:#2a1c08;border:1px solid #f59e0b33;width:55%;left:28%;top:44%;"></div>
+        <div class="scr" style="width:26px;height:17px;background:#0a0c10;border:1px solid #f59e0b66;left:46%;top:30%;"><div class="scr-line" style="background:#f59e0b;animation-duration:2.5s;"></div></div>
+        <div class="furn crate" style="background:#1a1a10;border:1px solid #f59e0b44;width:17px;height:21px;left:14%;top:40%;"></div>
+        <div class="lglow" style="width:20px;height:20px;background:radial-gradient(#f59e0b44,transparent);left:73%;top:54%;"></div>
+        <div class="ldp" style="background:#f59e0b;left:75%;top:58%;"></div>
+        <div class="chair" style="background:#f59e0b22;border:1px solid #f59e0b33;left:30%;top:62%;"></div>
+      </div>
+      <div class="room" id="room-server" style="background:#00141a;">
+        <div class="room-grid"></div>
+        <div class="room-border" style="border:1.5px solid #00d4ff55;box-shadow:inset 0 0 18px #00d4ff08;"></div>
+        <div class="rc tl" style="border-color:#00d4ff;"></div><div class="rc tr" style="border-color:#00d4ff;"></div><div class="rc bl" style="border-color:#00d4ff;"></div><div class="rc br" style="border-color:#00d4ff;"></div>
+        <div class="room-label" style="color:#00d4ff;">SERVER ROOM</div>
+        <div class="room-sub" style="color:#00d4ff88;">SEO & Algorithm</div>
+        <div class="rack" style="background:#090e16;border:1px solid #00d4ff44;width:15px;height:44px;left:18%;top:28%;"><div class="rled" style="background:#00d4ff;top:5px;--d:.8s;"></div><div class="rled" style="background:#00d4ff;top:14px;--d:1.3s;"></div><div class="rled" style="background:#00d4ff;top:23px;--d:.6s;"></div><div class="rled" style="background:#00d4ff;top:32px;--d:1.8s;"></div></div>
+        <div class="rack" style="background:#090e16;border:1px solid #00d4ff44;width:15px;height:44px;left:32%;top:28%;"><div class="rled" style="background:#00d4ff;top:5px;--d:1.1s;"></div><div class="rled" style="background:#00d4ff;top:14px;--d:.7s;"></div><div class="rled" style="background:#00d4ff;top:23px;--d:1.5s;"></div><div class="rled" style="background:#00d4ff;top:32px;--d:.9s;"></div></div>
+        <div class="rack" style="background:#090e16;border:1px solid #00d4ff44;width:15px;height:44px;left:46%;top:28%;"><div class="rled" style="background:#00d4ff;top:5px;--d:1.4s;"></div><div class="rled" style="background:#00d4ff;top:14px;--d:.5s;"></div><div class="rled" style="background:#00d4ff;top:23px;--d:1.9s;"></div><div class="rled" style="background:#00d4ff;top:32px;--d:1.2s;"></div></div>
+        <div class="furn desk" style="background:#0a140a;border:1px solid #00d4ff33;width:58%;left:24%;top:78%;"></div>
+        <div class="scr" style="width:28px;height:18px;background:#050a10;border:1px solid #00d4ff66;left:38%;top:60%;"><div class="scr-line" style="background:#00d4ff;animation-duration:2s;"></div></div>
+        <div class="lglow" style="width:20px;height:20px;background:radial-gradient(#00d4ff44,transparent);left:78%;top:58%;"></div>
+        <div class="ldp" style="background:#00d4ff;left:80%;top:62%;"></div>
+      </div>
+      <div class="room" id="room-lobby" style="background:#001410;">
+        <div class="room-grid"></div>
+        <div class="room-border" style="border:1.5px solid #10b98155;box-shadow:inset 0 0 18px #10b98108;"></div>
+        <div class="rc tl" style="border-color:#10b981;"></div><div class="rc tr" style="border-color:#10b981;"></div><div class="rc bl" style="border-color:#10b981;"></div><div class="rc br" style="border-color:#10b981;"></div>
+        <div class="room-label" style="color:#10b981;">LOBBY</div>
+        <div class="room-sub" style="color:#10b98188;">Intel & Recon</div>
+        <div class="furn desk" style="background:#081a10;border:1px solid #10b98133;width:53%;left:10%;top:44%;"></div>
+        <div class="scr" style="width:26px;height:17px;background:#050e0a;border:1px solid #10b98166;left:18%;top:28%;"><div class="scr-line" style="background:#10b981;animation-duration:3s;"></div></div>
+        <div class="furn crate" style="background:#081810;border:1px solid #10b98133;width:15px;height:28px;left:70%;top:30%;"></div>
+        <div class="furn crate" style="background:#081810;border:1px solid #10b98133;width:13px;height:24px;left:76%;top:40%;"></div>
+        <div class="lglow" style="width:20px;height:20px;background:radial-gradient(#10b98144,transparent);left:53%;top:64%;"></div>
+        <div class="ldp" style="background:#10b981;left:55%;top:68%;"></div>
+        <div class="chair" style="background:#10b98122;border:1px solid #10b98133;left:10%;top:62%;"></div>
+      </div>
+      <div class="room" id="room-garage" style="background:#140000;">
+        <div class="room-grid"></div>
+        <div class="room-border" style="border:1.5px solid #ef444455;box-shadow:inset 0 0 18px #ef444408;"></div>
+        <div class="rc tl" style="border-color:#ef4444;"></div><div class="rc tr" style="border-color:#ef4444;"></div><div class="rc bl" style="border-color:#ef4444;"></div><div class="rc br" style="border-color:#ef4444;"></div>
+        <div class="room-label" style="color:#ef4444;">GARAGE</div>
+        <div class="room-sub" style="color:#ef444488;">Execution Base</div>
+        <div class="furn desk" style="background:#180a0a;border:1px solid #ef444433;width:58%;left:10%;top:56%;"></div>
+        <div class="furn crate" style="background:#1a0808;border:1px solid #ef444433;width:18px;height:20px;left:66%;top:26%;"></div>
+        <div class="furn crate" style="background:#180808;border:1px solid #ef444333;width:16px;height:17px;left:74%;top:36%;"></div>
+        <div class="furn crate" style="background:#160808;border:1px solid #ef444333;width:14px;height:15px;left:70%;top:48%;"></div>
+        <div class="lglow" style="width:20px;height:20px;background:radial-gradient(#ef444444,transparent);left:18%;top:33%;"></div>
+        <div class="ldp" style="background:#ef4444;left:20%;top:37%;"></div>
+        <div style="position:absolute;left:12%;top:52%;width:38%;height:2px;background:#ef444422;border-radius:1px;"></div>
+      </div>
+      <div class="room strategy" id="room-plan" style="background:#0d0018;">
+        <div class="room-grid"></div>
+        <div class="room-border" style="border:1.5px solid #c084fc55;box-shadow:inset 0 0 18px #c084fc08;"></div>
+        <div class="rc tl" style="border-color:#c084fc;"></div><div class="rc tr" style="border-color:#c084fc;"></div><div class="rc bl" style="border-color:#c084fc;"></div><div class="rc br" style="border-color:#c084fc;"></div>
+        <div class="room-label" style="color:#c084fc;">STRATEGY TABLE</div>
+        <div class="room-sub" style="color:#c084fc88;">Planning HQ</div>
+        <div class="tbl" style="background:#180c28;border:1px solid #c084fc44;width:44%;height:38%;left:28%;top:28%;"></div>
+        <div class="chair" style="background:#c084fc22;border:1px solid #c084fc33;left:29%;top:22%;"></div>
+        <div class="chair" style="background:#c084fc22;border:1px solid #c084fc33;left:41%;top:20%;"></div>
+        <div class="chair" style="background:#c084fc22;border:1px solid #c084fc33;left:53%;top:22%;"></div>
+        <div class="chair" style="background:#c084fc22;border:1px solid #c084fc33;left:29%;top:67%;"></div>
+        <div class="chair" style="background:#c084fc22;border:1px solid #c084fc33;left:41%;top:69%;"></div>
+        <div class="chair" style="background:#c084fc22;border:1px solid #c084fc33;left:53%;top:67%;"></div>
+        <div class="scr" style="width:32px;height:22px;background:#060010;border:1px solid #c084fc66;left:8%;top:28%;"><div class="scr-line" style="background:#c084fc;animation-duration:2.8s;"></div></div>
+        <div class="papers" style="background:#1e1030;border:1px solid #c084fc22;width:8%;height:14%;left:30%;top:34%;"></div>
+        <div class="papers" style="background:#1a0c2a;border:1px solid #c084fc22;width:7%;height:11%;left:52%;top:40%;"></div>
+        <div class="lglow" style="width:20px;height:20px;background:radial-gradient(#c084fc44,transparent);left:86%;top:32%;"></div>
+        <div class="ldp" style="background:#c084fc;left:88%;top:36%;"></div>
+        <div class="lglow" style="width:20px;height:20px;background:radial-gradient(#c084fc44,transparent);left:86%;top:62%;"></div>
+        <div class="ldp" style="background:#c084fc;left:88%;top:66%;"></div>
+      </div>
+    </div>
+    <!-- agents rendered by JS -->
+  </div>
+  <div class="mgr">
+    <div class="mgr-hdr">
+      <div class="mgr-row">
+        <div class="mgr-icon">👔</div>
+        <div><div class="mgr-name">DIRECTOR NOVA</div><div class="mgr-role">Operations Manager — All-Seeing</div></div>
+      </div>
+      <div class="mgr-status" id="mgrstatus">Monitoring all agents. Ask me anything.</div>
+    </div>
+    <div class="mgr-chat" id="mgrchat">
+      <div class="bubble nova">Welcome to Mission Control. I have eyes on all four agents at all times. Ask me what's happening, what the crew is working on, or what you should do next for your Etsy shop.</div>
+    </div>
+    <div class="mgr-foot">
+      <div class="mgr-inp-row">
+        <textarea class="mgr-inp" id="mgrinp" placeholder="Ask the Director..." rows="1"></textarea>
+        <button class="mgr-send" id="mgrsend" onclick="askNova()">➤</button>
+      </div>
+      <div class="mgr-hint">Enter to send · Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+<div class="apibar">
+  <span class="api-lbl">API KEY</span>
+  <input type="password" class="api-inp" id="apiinp" placeholder="sk-ant-api03-... (console.anthropic.com)"/>
+  <button class="api-btn" onclick="saveKey()">ACTIVATE AI</button>
+  <span class="api-note">Stored locally · Never shared · Costs pennies per session</span>
+</div>
+<script>
+var AI=false,AKEY='',EXC=0,PNUM=0,scrollLocked=false;
+AKEY=localStorage.getItem('mc_key')||'';
+if(AKEY) activateAI();
+
+function saveKey(){var k=document.getElementById('apiinp').value.trim();if(!k.startsWith('sk-')){alert('Enter a valid Anthropic API key');return;}AKEY=k;localStorage.setItem('mc_key',k);activateAI();}
+function activateAI(){AI=true;document.getElementById('aipill').textContent='● AI LIVE';document.getElementById('aipill').className='aipill aion';document.getElementById('apiinp').value='••••••••••••••••••••';addLog('sys','System','AI activated. Live responses enabled.','#475569');}
+
+var logEl=document.getElementById('logbody'),jumpBtn=document.getElementById('jumpbtn');
+logEl.addEventListener('scroll',function(){var atBottom=logEl.scrollHeight-logEl.scrollTop-logEl.clientHeight<30;scrollLocked=!atBottom;jumpBtn.style.display=scrollLocked?'block':'none';});
+function jumpBottom(){scrollLocked=false;jumpBtn.style.display='none';logEl.scrollTop=logEl.scrollHeight;}
+function addLog(type,name,text,color){
+  var now=new Date(),t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+  var d=document.createElement('div');d.className='log-entry'+(type==='sys'?' log-sys':'');
+  d.innerHTML='<div class="log-meta"><div class="log-av" style="background:'+(color||'#475569')+'33;color:'+(color||'#94a3b8')+';border:1px solid '+(color||'#475569')+'44;">'+(type==='sys'?'⬡':name[0])+'</div><span class="log-name" style="color:'+(color||'#94a3b8')+';">'+name+'</span><span class="log-time">'+t+'</span></div><div class="log-txt">'+text+'</div>';
+  logEl.appendChild(d);if(logEl.children.length>150)logEl.removeChild(logEl.children[0]);
+  if(!scrollLocked)logEl.scrollTop=logEl.scrollHeight;
+  EXC++;document.getElementById('exc').textContent=EXC;
+}
+
+// Particles
+(function(){var pc=document.getElementById('particles'),cs=['#00d4ff','#c084fc','#10b981','#f59e0b'];for(var i=0;i<25;i++){var p=document.createElement('div');p.className='particle';var s=Math.random()*2+.5;p.style.cssText='width:'+s+'px;height:'+s+'px;background:'+cs[i%4]+';left:'+Math.random()*100+'%;animation-duration:'+(Math.random()*14+7)+'s;animation-delay:'+(-Math.random()*14)+'s;opacity:.35;';pc.appendChild(p);}})();
+
+// AGENTS - created by JS and positioned absolutely on the floor div
+var AGENT_DATA=[
+  {id:'g',name:'SLOANE',role:'Grifter',  color:'#f59e0b',hatColor:'#c47d09'},
+  {id:'h',name:'ZERO',  role:'Hacker',   color:'#00d4ff',hatColor:'#009ab8'},
+  {id:'i',name:'MARCUS',role:'Inside',   color:'#10b981',hatColor:'#0a7a55'},
+  {id:'m',name:'RIGGS', role:'Muscle',   color:'#ef4444',hatColor:'#b02020'},
+];
+
+var AGENTS={};
+
+function makeAgent(data){
+  var el=document.createElement('div');
+  el.className='agent';
+  el.id='agent-'+data.id;
+  el.style.cssText='left:0;top:0;';
+  var c=data.color,h=data.hatColor;
+  el.innerHTML=
+    '<div class="speech" id="speech-'+data.id+'" style="display:none;color:'+c+';border-color:'+c+'66;"></div>'+
+    '<div class="ag-glow" style="background:radial-gradient('+c+'44,transparent);"></div>'+
+    '<div class="ag-fig">'+
+      '<div class="ag-shad"></div>'+
+      '<div class="ag-legs">'+
+        '<div class="leg" id="leg1-'+data.id+'" style="background:'+c+';"></div>'+
+        '<div class="leg" id="leg2-'+data.id+'" style="background:'+c+';"></div>'+
+      '</div>'+
+      '<div class="ag-body" style="background:'+c+'cc;"></div>'+
+      '<div class="ag-head" style="background:'+c+';"></div>'+
+      '<div class="ag-hat" style="background:'+h+';"></div>'+
+    '</div>'+
+    '<div class="ag-badge" style="border-color:'+c+'55;">'+
+      '<div class="ag-name" style="color:'+c+';">'+data.name+'</div>'+
+      '<div class="ag-role" style="color:'+c+';">'+data.role+'</div>'+
+    '</div>';
+  document.getElementById('floor').appendChild(el);
+  return {
+    el:el, id:data.id, color:c,
+    cx:0, cy:0, tx:0, ty:0,
+    speechEl:document.getElementById('speech-'+data.id),
+    leg1:document.getElementById('leg1-'+data.id),
+    leg2:document.getElementById('leg2-'+data.id),
+  };
+}
+
+AGENT_DATA.forEach(function(d){AGENTS[d.id]=makeAgent(d);});
+
+// Room target positions - as percentages of floor div
+var ROOM_TARGETS={
+  vault:   {pctX:.12, pctY:.28},
+  server:  {pctX:.40, pctY:.28},
+  lobby:   {pctX:.68, pctY:.28},
+  garage:  {pctX:.12, pctY:.72},
+  plan:    {pctX:.55, pctY:.65},
+};
+
+var PLAN_SPOTS=[
+  {pctX:.40,pctY:.55},{pctX:.50,pctY:.55},{pctX:.60,pctY:.55},{pctX:.40,pctY:.72},{pctX:.50,pctY:.72},{pctX:.60,pctY:.72}
+];
+
+var HOME_ROOMS={g:'vault',h:'server',i:'lobby',m:'garage'};
+var agentOrder=['g','h','i','m'];
+
+function getFloorSize(){
+  var f=document.getElementById('floor');
+  return{w:f.offsetWidth||f.clientWidth,h:f.offsetHeight||f.clientHeight};
+}
+
+function setTarget(id, pctX, pctY){
+  var a=AGENTS[id], fs=getFloorSize();
+  a.tx=pctX*fs.w;
+  a.ty=pctY*fs.h;
+}
+
+function placeHome(){
+  var fs=getFloorSize();
+  if(fs.w < 100 || fs.h < 100) return;
+  agentOrder.forEach(function(id,i){
+    var room=HOME_ROOMS[id];
+    var t=ROOM_TARGETS[room];
+    var jitter={x:(Math.random()-.5)*.06,y:(Math.random()-.5)*.08};
+    var a=AGENTS[id];
+    a.cx=(t.pctX+jitter.x)*fs.w;
+    a.cy=(t.pctY+jitter.y)*fs.h;
+    a.tx=a.cx; a.ty=a.cy;
+    a.el.style.left=Math.round(a.cx)+'px';
+    a.el.style.top=Math.round(a.cy)+'px';
+    a.el.style.display='flex';
+  });
+}
+
+// Smooth movement loop
+setInterval(function(){
+  agentOrder.forEach(function(id){
+    var a=AGENTS[id];
+    var dx=a.tx-a.cx, dy=a.ty-a.cy;
+    var moving=Math.abs(dx)>2||Math.abs(dy)>2;
+    if(moving){a.cx+=dx*.055;a.cy+=dy*.055;}
+    else{a.cx=a.tx;a.cy=a.ty;}
+    a.el.style.left=Math.round(a.cx)+'px';
+    a.el.style.top=Math.round(a.cy)+'px';
+    if(moving){
+      a.leg1.classList.add('walk'); a.leg2.classList.add('walk2');
+      a.leg1.classList.remove('walk2'); a.leg2.classList.remove('walk');
+    } else {
+      a.leg1.classList.remove('walk','walk2'); a.leg2.classList.remove('walk','walk2');
+    }
+  });
+},16);
+
+// Resize handler
+window.addEventListener('resize',function(){
+  agentOrder.forEach(function(id){
+    var a=AGENTS[id];
+    var fs=getFloorSize();
+    if(a.tx>0){
+      var pctX=a.tx/(fs.w||1), pctY=a.ty/(fs.h||1);
+      a.tx=pctX*fs.w; a.ty=pctY*fs.h;
+      a.cx=a.tx; a.cy=a.ty;
+    }
+  });
+});
+
+function moveToRoom(id, room, spotIdx){
+  var a=AGENTS[id], fs=getFloorSize();
+  if(room==='plan'){
+    var spot=PLAN_SPOTS[spotIdx%PLAN_SPOTS.length];
+    a.tx=spot.pctX*fs.w; a.ty=spot.pctY*fs.h;
+  } else {
+    var t=ROOM_TARGETS[room];
+    var jitter={x:(Math.random()-.5)*.05, y:(Math.random()-.5)*.06};
+    a.tx=(t.pctX+jitter.x)*fs.w;
+    a.ty=(t.pctY+jitter.y)*fs.h;
+  }
+}
+
+function setSpeech(id, text, dur){
+  var a=AGENTS[id]; if(!a) return;
+  a.speechEl.textContent=text; a.speechEl.style.display='block';
+  setTimeout(function(){a.speechEl.style.display='none';}, dur||5000);
+}
+
+// Init after layout is ready
+function tryInit(){
+  placeHome();
+  // verify agents placed correctly
+  var a0 = AGENTS['g'];
+  if(a0 && a0.cx < 10){
+    setTimeout(tryInit, 500);
+    return;
+  }
+  phaseLoop();
+  addLog('sys','System','Mission Control online. All systems operational.','#475569');
+}
+// Try multiple times to guarantee placement
+setTimeout(tryInit, 500);
+setTimeout(tryInit, 1000);
+setTimeout(tryInit, 2000);
+setTimeout(tryInit, 3000);
+
+// AI
+var SYSTEMS={
+  g:'You are Vincent Sloane, The Grifter — marketing expert for Etsy shop ListedAndDesigned (real estate Canva templates). ONE punchy sentence of real Etsy marketing advice. Max 18 words. No quotes.',
+  h:'You are Zero, The Hacker — SEO specialist for ListedAndDesigned on Etsy. ONE precise sentence of real Etsy SEO advice. Max 18 words. No quotes.',
+  i:'You are Marcus Cole, The Inside Man — market intel for ListedAndDesigned on Etsy. ONE sentence of competitor/buyer intel. Max 18 words. No quotes.',
+  m:'You are Riggs, The Muscle — execution for ListedAndDesigned on Etsy. ONE blunt action sentence. Max 18 words. No quotes.',
+};
+var FALLBACKS={
+  g:['Thumbnail first — make it impossible to scroll past.','Front-load every keyword in your listing title.','Real estate agents have money and zero time. Sell convenience.','One five-star review changes your entire conversion rate.'],
+  h:['Fresh listings get a 2-week Etsy algorithm boost — launch fast.','Front-load your primary keyword in the first 3 title words.','Tags must mirror exact buyer search phrases.','Star Seller badge doubles click-through rate.'],
+  i:['Most competitors ignore real estate agents entirely — wide open niche.','Buyers search realtor canva template 8,000 times monthly.','No competitor offers a complete listing lifecycle pack.','Competitor average price is $12. Our design quality justifies $18-24.'],
+  m:['Upload the listing today. Not tomorrow. Right now.','Five templates is enough. Stop perfecting. Ship it.','DM five real estate agents on Instagram. Offer one free for a review.','Post your mockup on Pinterest with the Etsy link. Free traffic.'],
+};
+var TOPICS=['How do we land our first Etsy sale with zero reviews?','What keywords should we front-load in our title?','How do we beat competitors with hundreds of reviews?','What is the ideal price for our 5-template pack?','How do we get our very first review fast?','Should we run a launch discount?','What should our next product be?','How do we optimize our thumbnail to increase clicks?'];
+var NAMES={g:'SLOANE',h:'ZERO',i:'MARCUS',m:'RIGGS'};
+var COLORS={g:'#f59e0b',h:'#00d4ff',i:'#10b981',m:'#ef4444'};
+function rand(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+async function callAI(system,prompt,tokens){
+  if(!AI) return null;
+  try{
+    var res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:tokens||70,system:system,messages:[{role:'user',content:prompt}]})});
+    var d=await res.json();if(d.error) return null;
+    return d.content.map(function(i){return i.text||'';}).join('').trim().replace(/^["'`]|["'`]$/g,'');
+  }catch(e){return null;}
+}
+async function getLine(id,prompt){return(await callAI(SYSTEMS[id],prompt,65))||rand(FALLBACKS[id]);}
+
+// PHASES
+var PI=0,PLOCK=false;
+var PHASES=[
+  {name:'INTEL GATHERING',fn:phIntel},
+  {name:'PLANNING SESSION',fn:phPlan},
+  {name:'STRATEGY DEBATE', fn:phDebate},
+  {name:'CROSS BRIEF',     fn:phCross},
+  {name:'DEPLOYMENT',      fn:phDeploy},
+  {name:'SOLO OPS',        fn:phSolo},
+];
+function setPtxt(t){document.getElementById('ptxt').textContent=t;PNUM++;document.getElementById('pnum').textContent=PNUM;}
+
+async function phIntel(){
+  setPtxt('INTEL GATHERING');addLog('sys','System','Agents returning to stations.','#475569');
+  var rooms=['vault','server','lobby','garage'];
+  agentOrder.forEach(function(id,i){moveToRoom(id,rooms[i],i);});
+  await sleep(1600);
+  for(var i=0;i<4;i++){var id=agentOrder[i];var l=await getLine(id,'Quick intel update on our Etsy shop.');setSpeech(id,l,5000);addLog(id,NAMES[id],l,COLORS[id]);await sleep(2800);}
+}
+async function phPlan(){
+  var topic=rand(TOPICS);setPtxt('PLANNING');addLog('sys','System','All agents to strategy table. Topic: '+topic,'#475569');
+  agentOrder.forEach(function(id,i){moveToRoom(id,'plan',i);});
+  await sleep(2200);
+  for(var i=0;i<4;i++){var id=agentOrder[i];var l=await getLine(id,topic);setSpeech(id,l,5000);addLog(id,NAMES[id],l,COLORS[id]);await sleep(3000);}
+}
+async function phDebate(){
+  var topic=rand(TOPICS);setPtxt('DEBATE');addLog('sys','System','Debate: '+topic,'#475569');
+  agentOrder.forEach(function(id,i){moveToRoom(id,'plan',i);});
+  await sleep(2000);
+  var prev='';
+  for(var i=0;i<4;i++){
+    var id=agentOrder[i];
+    var p=i===0?topic:(i===1?'Counter with SEO angle: ':i===2?'Add market intel to: ':'Give the action step from: ')+prev;
+    var l=await getLine(id,p);prev+=l+' ';setSpeech(id,l,5000);addLog(id,NAMES[id],l,COLORS[id]);await sleep(2800);
+  }
+}
+async function phCross(){
+  setPtxt('CROSS BRIEF');addLog('sys','System','Cross-team briefing.','#475569');
+  moveToRoom('g','plan',0);moveToRoom('m','plan',2);moveToRoom('h','server',0);moveToRoom('i','lobby',0);
+  await sleep(1800);
+  var l1=await getLine('g','Marketing status update.');setSpeech('g',l1,5000);addLog('g','SLOANE',l1,'#f59e0b');await sleep(2600);
+  var l2=await getLine('m','Respond to Sloane: '+l1);setSpeech('m',l2,5000);addLog('m','RIGGS',l2,'#ef4444');await sleep(2600);
+  var l3=await getLine('h','SEO status update.');setSpeech('h',l3,5000);addLog('h','ZERO',l3,'#00d4ff');await sleep(2600);
+  var l4=await getLine('i','Respond to Zero: '+l3);setSpeech('i',l4,5000);addLog('i','MARCUS',l4,'#10b981');await sleep(2200);
+}
+async function phDeploy(){
+  setPtxt('DEPLOYMENT');addLog('sys','System','Agents deploying.','#475569');
+  var rooms=['vault','server','lobby','garage'];
+  agentOrder.forEach(function(id,i){moveToRoom(id,rooms[i],i);});
+  await sleep(1500);
+  var chk={g:'Grifter in position.',h:'Zero online.',i:'Marcus clear.',m:'Riggs ready.'};
+  for(var i=0;i<4;i++){var id=agentOrder[i];setSpeech(id,chk[id],3000);addLog(id,NAMES[id],chk[id],COLORS[id]);await sleep(900);}
+  await sleep(600);
+  for(var i=0;i<4;i++){var id=agentOrder[i];var l=await getLine(id,'Your one priority action right now.');setSpeech(id,l,5000);addLog(id,NAMES[id],l,COLORS[id]);await sleep(2400);}
+}
+async function phSolo(){
+  setPtxt('SOLO OPS');addLog('sys','System','Agents working independently.','#475569');
+  var rooms=['vault','server','lobby','garage'];
+  agentOrder.forEach(function(id,i){moveToRoom(id,rooms[i],i);});
+  await sleep(2200);
+  for(var i=0;i<5;i++){await sleep(2800);var id=agentOrder[Math.floor(Math.random()*4)];var l=await getLine(id,'What are you focused on right now?');setSpeech(id,l,5000);addLog(id,NAMES[id],l,COLORS[id]);}
+}
+
+async function phaseLoop(){
+  while(true){if(!PLOCK){PLOCK=true;await PHASES[PI%PHASES.length].fn();PI++;await sleep(2000);PLOCK=false;}await sleep(500);}
+}
+
+// NOVA
+async function askNova(){
+  var inp=document.getElementById('mgrinp'),text=inp.value.trim();if(!text) return;
+  inp.value='';inp.style.height='34px';
+  var chat=document.getElementById('mgrchat');
+  var ub=document.createElement('div');ub.className='bubble user';ub.textContent=text;chat.appendChild(ub);
+  var tb=document.createElement('div');tb.className='bubble think';tb.textContent='Director Nova is analyzing...';chat.appendChild(tb);
+  chat.scrollTop=chat.scrollHeight;
+  document.getElementById('mgrsend').disabled=true;
+  await sleep(600);
+  var t=text.toLowerCase(),phase=document.getElementById('ptxt').textContent,reply='';
+  if(t.includes('happen')||t.includes('going on')||t.includes('doing')||t.includes('working on')){reply='Currently in '+phase+' — phase '+PNUM+', '+EXC+' exchanges logged. Sloane is working the marketing angle in the Vault, Zero is running SEO in the Server Room, Marcus is gathering intel in the Lobby, and Riggs is ready to execute from the Garage. All four active and communicating.';}
+  else if(t.includes('first sale')||t.includes('get a sale')||t.includes('make money')){reply='Three things get your first sale: A thumbnail that stops the scroll — your mockup is strong, lead with it. A title starting with "realtor canva template" — 8,000 monthly searches on Etsy. And one targeted share in a real estate Facebook group today. That combination breaks through with zero reviews.';}
+  else if(t.includes('verif')){reply='Etsy verification typically takes 1-3 days but often arrives within hours. Your product is completely ready — 5 templates built, delivery PDF done, listing copy written, mockup image ready. The moment that email comes, you publish immediately. Everything is staged.';}
+  else if(t.includes('nova')||t.includes('you there')||t.includes('are you')||t.includes('live')||t.includes('work')){reply='I\'m here and fully operational. Eyes on all four agents at all times — '+EXC+' exchanges across '+PNUM+' phases. Currently running '+phase+'. Ask me anything.';}
+  else if(t.includes('music')||t.includes('song')||t.includes('beat')){reply='Music is a legitimate Etsy digital product — beats, sample packs, and license tracks all sell well. Same model as your templates: create once, sell infinitely, deliver automatically. Niche down first: lo-fi beats, real estate walkthrough music, podcast intros. Want me to map out a parallel music operation?';}
+  else if(t.includes('price')||t.includes('cost')||t.includes('charge')){reply='Your $18 price is the sweet spot. Above the $12 competitor average — signals quality — but not so high that a zero-review shop scares buyers. At 10+ reviews, test $24. At 50+ reviews, $29-35 becomes realistic. Nearly 100% margin on digital products.';}
+  else if(t.includes('next product')||t.includes('second product')||t.includes('expand')){reply='Top three from the crew\'s debates: A real estate social media post pack — Instagram, Facebook, LinkedIn in one bundle at $22-28. A buyer\'s guide template — agents use these constantly, almost no competition. Or city-specific packs like "luxury Texas real estate templates." Start with the social media pack.';}
+  else if(t.includes('seo')||t.includes('keyword')||t.includes('tag')||t.includes('title')){reply='Zero\'s latest: Front-load "realtor canva template" — 6,000-8,000 monthly Etsy searches, low competition. For tags use: "realtor marketing", "real estate canva", "listing flyer template", "just listed template". Never use creative descriptions in tags. Optimal title: "Real Estate Agent Canva Template Pack | Just Listed, For Sale, Open House, Just Sold, Coming Soon Flyers".';}
+  else if(t.includes('review')||t.includes('rating')){reply='Getting your first review is the single most important milestone. DM five real estate agents on Instagram and offer the templates free for an honest Etsy review. Include a review request in your delivery PDF. One review changes your entire conversion rate.';}
+  else if(t.includes('competitor')||t.includes('market')){reply='Marcus\'s intel: Most real estate template competitors use generic identical designs. Your navy and white luxury aesthetic already stands out. Key gap: nobody offers a complete listing lifecycle pack. That\'s your edge and it\'s wide open.';}
+  else{reply='Current status: phase '+PNUM+', '+EXC+' exchanges logged, running '+phase+'. The crew is actively working your shop strategy. Product ready, listing copy written, delivery PDF done — just waiting on Etsy verification. What specifically do you want to dig into?';}
+  tb.className='bubble nova';tb.textContent=reply;chat.scrollTop=chat.scrollHeight;
+  document.getElementById('mgrsend').disabled=false;
+}
+
+var mgrinp=document.getElementById('mgrinp');
+mgrinp.addEventListener('input',function(){this.style.height='34px';this.style.height=Math.min(this.scrollHeight,90)+'px';});
+mgrinp.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askNova();}});
+</script>
+</body>
+</html>
